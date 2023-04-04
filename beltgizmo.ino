@@ -1,6 +1,8 @@
 #include <MD_MAX72xx.h>
 #include <MD_Parola.h>
+#include <piano.h>
 #include <pgmspace.h>
+#include <temperature.h>
 #include <webpage.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -75,12 +77,20 @@ void handleLEDUpdate() {
 }
 
 void handleBuzzer() {
-  if (server.hasArg("volume")) {
-    int volume = server.arg("volume").toInt();
-    int frequency = 2000;
-    int duration = 50;
+  if (server.hasArg("key")) {
+    int key = server.arg("key").toInt();
 
-    tone(buzzerPin, frequency, duration);
+    // Define mapping of piano keys to frequencies
+    const int notes[] = {262, 294, 330, 349, 392, 440, 494, 523};
+
+    // Play the corresponding note on the buzzer
+    if (key >= 1 && key <= 8) {
+      int frequency = notes[key-1];
+      int duration = 250;
+      playNote(frequency, 2);
+      delay(duration + 50);
+      noToneAC();
+    }
   }
   server.send(200, "text/plain", "OK");
 }
