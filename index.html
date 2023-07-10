@@ -3,12 +3,44 @@
 <head>
   <style>
     /* Add your CSS styles here */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #333;
+      color: #FFA500;
+    }
+    h1 {
+      text-align: center;
+    }
+    nav {
+      background-color: #222;
+      color: #FFA500;
+      padding: 10px;
+      text-align: center;
+    }
+    nav ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    nav ul li {
+      display: inline;
+      margin-right: 10px;
+    }
+    nav ul li a {
+      color: #FFA500;
+      text-decoration: none;
+    }
+    /* Additional styles from each .h file */
+    /* From calculator.h */
+    /* From piano.h */
+    /* From temperature.h */
+    /* From animations.h */
   </style>
   <script>
     /* Add your JavaScript code here */
     /* From calculator.h */
     /* From piano.h */
     /* From temperature.h */
+    /* From animations.h */
   </script>
 </head>
 <body>
@@ -17,7 +49,8 @@
       <li><a href="#calculator">Calculator</a></li>
       <li><a href="#piano">Piano</a></li>
       <li><a href="#temperature">Temperature</a></li>
-      <li><a href="#settings">Settings</a></li>
+      <li><a href="#animations">Animations</a></li>
+      <li><a href="#" id="mute">Mute</a></li>
     </ul>
   </nav>
 
@@ -36,8 +69,15 @@
     /* From temperature.h */
   </section>
 
-  <section id="settings">
-    <!-- Add your settings HTML here -->
+  <section id="animations">
+    <!-- Add your animations HTML here -->
+    /* From animations.h */
   </section>
+
+  <script>
+    document.getElementById('mute').addEventListener('click', function() {
+      /* Add code to send a request to the server to toggle the mute state */
+    });
+  </script>
 </body>
 </html>
