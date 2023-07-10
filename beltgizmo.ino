@@ -1,96 +1,134 @@
-#include <MD_MAX72xx.h>
-#include <MD_Parola.h>
-#include <piano.h>
-#include <pgmspace.h>
-#include <temperature.h>
-#include <webpage.h>
+#include <Arduino.h>
+#include <Wire.h>
+#include <MD_MAX72XX.h>
+#include <MD_MAX72xx_font.h>
+#include <ESPAsyncWebServer.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
-#include <WiFiManager.h>
-#include <WebServer.h>
 
+#include "animation.h"   // Include the animation header file
+#include "piano.h"       // Include the piano header file
+#include "temperature.h" // Include the temperature header file
+#include "calculator.h"  // Include the calculator header file
+#include "index.h"       // Include the index header file
+
+// Pins for the MAX7219
+#define DATA_PIN 14
+#define CLK_PIN 13
+#define CS_PIN 27
+
+// Buzzer pin
+#define BUZZER_PIN 2
+
+// Number of devices (7-segment displays)
+#define MAX_DEVICES 8
+
+// Status LED pin
+#define STATUS_LED_PIN 23
+
+// WiFi credentials
 const char* ssid = "sanyo808D";
 const char* password = "ghostbuster";
-IPAddress apIP(192, 168, 4, 1);
-WebServer server(80);
-WiFiManager wifiManager;
 
-const uint8_t buzzerPin = 2;
-const uint8_t CLK_PIN = 13;
-const uint8_t DATA_PIN = 14;
-const uint8_t CS_PIN = 27;
+// Create a new instance for the LED Matrix
+MD_MAX72XX mx = MD_MAX72XX(CS_PIN, MAX_DEVICES);
 
-const uint8_t MAX_DEVICES = 8;
-const uint8_t CHAR_SPACING = 1;
-const uint8_t SCROLL_SPEED = 50;
+// Create a server instance
+AsyncWebServer server(80);
 
-MD_Parola P = MD_Parola(MD_MAX72XX::FC16_HW, CS_PIN, MAX_DEVICES);
+// Add these at the top of your sketch
+bool playThemeFlag = true;  // Set to true or false to control theme playing
+unsigned long previousMillis = 0;  // will store the last time the theme was played
+const long interval = 900000;  // interval at which to play theme (milliseconds)
+
+// Set up the display
+void setupDisplay() {
+  mx.begin();
+  mx.control(MD_MAX72XX::INTENSITY, 8); // Set intensity levels (0-15)
+  mx.clear();
+}
+
+// Function to display a number on the 7-segment displays
+void displayNumber(int num) {
+  mx.clear();
+  for (int i = 0; i < MAX_DEVICES; i++) {
+    byte digit = num % 10;
+    mx.setDigit(i, digit, false);
+    num /= 10;
+    if (num == 0)
+      break;
+  }
+}
+
+// Set up the buzzer
+void setupBuzzer() {
+  pinMode(BUZZER_PIN, OUTPUT);
+}
+
+// Set up the status LED
+void setupStatusLED() {
+  pinMode(STATUS_LED_PIN, OUTPUT);
+}
+
+// Function to set the status LED
+void setStatusLED(bool state) {
+  digitalWrite(STATUS_LED_PIN, state ? HIGH : LOW);
+}
+
+// Set up the web server
+void setupServer() {
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    // Serve the index_html webpage
+    String html = String(index_html);
+    request->send(200, "text/html", html);
+  });
+  server.on("/calc", HTTP_GET, [](AsyncWebServerRequest *request) {
+    // handleCalc(request);
+  });
+  server.on("/playBuzzer", HTTP_GET, [](AsyncWebServerRequest *request) {
+    // handleBuzzer(request);
+  });
+  server.on("/updateLed", HTTP_GET, [](AsyncWebServerRequest *request) {
+    // handleLEDUpdate(request);
+  });
+  server.on("/getTemperature", HTTP_GET, [](AsyncWebServerRequest *request) {
+    // handleGetTemperature(request);
+  });
+  server.begin();
+}
+
+// Set up the WiFi connection
+void setupWiFi() {
+  WiFi.softAP(ssid, password);
+  delay(100); // needed to make sure the access point is started before configuring it
+  WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
+}
 
 void setup() {
   Serial.begin(115200);
-
-  // Start the access point
-  wifiManager.autoConnect("AP_Name", "AP_Password");
-  delay(100);
-  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
-  
-  // Configure the web server
-  server.on("/", handleRoot);
-  server.on("/calc", handleCalc);
-  server.on("/playBuzzer", handleBuzzer);
-  server.on("/updateLed", handleLEDUpdate);
-  server.begin();
-
-  Serial.print("Access point started, IP address: ");
-  Serial.println(WiFi.softAPIP());
-
-  pinMode(buzzerPin, OUTPUT);
-
-  P.begin();
-  P.setInvert(false);
-  P.setIntensity(15);
-  P.setTextAlignment(PA_CENTER);
-  P.displayClear();
-  P.displayText("0", PA_CENTER, SCROLL_SPEED, 0, PA_PRINT, PA_NO_EFFECT);
+  setupDisplay();
+  setupBuzzer();
+  setupStatusLED();
+  setupWiFi();
+  setupServer();
+  setStatusLED(true);
 }
 
 void loop() {
   server.handleClient();
-  P.displayAnimate();
-}
+  mx.displayAnimate();
 
-void handleRoot() {
-  server.send(200, "text/html", html);
-}
+  // Check whether to play the theme
+  if (playThemeFlag) {
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= interval) {
+      // Save the last time the theme was played
+      previousMillis = currentMillis;
 
-void handleCalc() {
-  server.send(200, "text/plain", "OK");
-}
-
-void handleLEDUpdate() {
-  if (server.hasArg("value")) {
-    String value = server.arg("value");
-    P.displayClear();
-    P.displayText(value.c_str(), PA_CENTER, SCROLL_SPEED, 0, PA_PRINT, PA_NO_EFFECT);
-  }
-  server.send(200, "text/plain", "OK");
-}
-
-void handleBuzzer() {
-  if (server.hasArg("key")) {
-    int key = server.arg("key").toInt();
-
-    // Define mapping of piano keys to frequencies
-    const int notes[] = {262, 294, 330, 349, 392, 440, 494, 523};
-
-    // Play the corresponding note on the buzzer
-    if (key >= 1 && key <= 8) {
-      int frequency = notes[key-1];
-      int duration = 250;
-      playNote(frequency, 2);
-      delay(duration + 50);
-      noToneAC();
+      // Play the Ghostbusters theme
+      playTheme(1);
     }
   }
-  server.send(200, "text/plain", "OK");
+
+  // You can add your own code here, but keep it non-blocking
 }
