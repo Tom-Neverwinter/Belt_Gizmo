@@ -76,7 +76,9 @@
 
   <script>
     document.getElementById('mute').addEventListener('click', function() {
-      /* Add code to send a request to the server to toggle the mute state */
+      fetch('/mute')
+        .then(response => response.text())
+        .then(data => console.log(data));
     });
   </script>
 </body>
