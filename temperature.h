@@ -7,19 +7,25 @@
 const char temperature_html[] PROGMEM = R"rawliteral(
 <div id='temp'>
   <h1>Temperature</h1>
-  <p id='temperature_value'>--.- °C</p>
+  <p>Gizmo Temperature: <span id='gizmo_temperature_value'>--.- °C</span></p>
+  <p>Phone Temperature: <span id='phone_temperature_value'>--.- °C</span></p>
 </div>
 <script>
-  function updateTemperatureDisplay(value) {
-    document.getElementById('temperature_value').innerHTML = value + ' °C';
+  function updateTemperatureDisplay(id, value) {
+    document.getElementById(id).innerHTML = value + ' °C';
   }
-  function fetchTemperature() {
+  function fetchGizmoTemperature() {
     fetch('/getTemperature').then((response) => response.json())
       .then((data) => {
-        updateTemperatureDisplay(data.temperature);
+        updateTemperatureDisplay('gizmo_temperature_value', data.temperature);
       });
   }
-  setInterval(fetchTemperature, 1000); // Update temperature every 1 second (1000 ms)
+  function fetchPhoneTemperature() {
+    // Here you would fetch the phone's temperature and call updateTemperatureDisplay
+    // updateTemperatureDisplay('phone_temperature_value', phoneTemperature);
+  }
+  setInterval(fetchGizmoTemperature, 1000); // Update gizmo temperature every 1 second (1000 ms)
+  setInterval(fetchPhoneTemperature, 1000); // Update phone temperature every 1 second (1000 ms)
 </script>
 )rawliteral";
 
